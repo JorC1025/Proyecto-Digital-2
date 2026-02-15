@@ -79,9 +79,10 @@ int main(void)
 			if (distancia_cm < 15)
 			{
 				PORTD |= (1<<PD4);
+				PORTD &= ~(1<<PD3);
 			} else {
 				PORTD &= ~(1<<PD4);
-				
+				PORTD |= (1<<PD3);
 			}			
 			buffer = 0;
 		}
@@ -122,6 +123,7 @@ ISR(TWI_vect){
 				 dato_recibido = TWDR;
 				 esperando_dato = 0;
 			 }
+
 
 			TWCR = (1<<TWINT)|(1<<TWEN)|(1<<TWIE)|(1<<TWEA);
 			break;
