@@ -10,12 +10,12 @@
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <util/delay.h>
-#include <stdlib.h>      // Necesaria para 'itoa' (convertir números a texto)
+#include <stdlib.h>      // Necesaria para 'itoa' (convertir nÃºmeros a texto)
 #include "I2C/I2C.h"
 #include "LCD/LCD.h"
 #include "BH1750.h"
 
-// --- CONFIGURACIÓN SENSORES ---
+// --- CONFIGURACIÃ“N SENSORES ---
 #define MAX_LUX 2000     // Valor de lux que consideramos el 100% de luz
 
 #define slaveUS1 0x30
@@ -29,6 +29,8 @@
 uint8_t direccion;
 uint8_t temp;
 uint8_t bufferI2C = 0;
+uint8_t distancia = 0;
+
 
 char buffer_distancia[10];
 char bufferDisp[10];
@@ -61,7 +63,7 @@ int main(void)
 			continue;;
 		}
 		I2C_Master_Write('R');
-		_delay_ms(10); 
+		_delay_ms(5); 
 		if (!I2C_Master_Repeated_Start())
 		{
 			I2C_Master_Stop();
@@ -74,19 +76,20 @@ int main(void)
 		}
 		I2C_Master_Read(&bufferI2C, 0);
 		I2C_Master_Stop();
+		distancia = bufferI2C;
 		//Aqui empieza lo de interpretar info de los esclavos
 		//COn esta distancia se si mi dc esta encendido o apagado, entonces aqui guardamos estado de motor y no hay que pedirselo al esclavo		
 		LCD_Set_Cursor(1,2);
 		LCD_Write_String("     ");
 		LCD_Set_Cursor(1,2);
-		itoa(bufferI2C, buffer_distancia, 10);
+		itoa(distancia, buffer_distancia, 10);
 		LCD_Write_String(buffer_distancia);
-		_delay_ms(50);
-		
-		//Envar datos al esclavo 2 inicia aquí (inicialmente mandar distancia al servo)
+		_delay_ms(5);
+		/*
+		//Envar datos al esclavo 2 inicia aquÃ­ (inicialmente mandar distancia al servo)
 		if(!I2C_Master_Start()) continue;
 
-		if (!I2C_Master_Write(slaveP2W))   // dirección escritura servo
+		if (!I2C_Master_Write(slaveP2W))   // direcciÃ³n escritura servo
 		{
 			I2C_Master_Stop();
 			continue;
@@ -96,27 +99,12 @@ int main(void)
 		I2C_Master_Write(bufferI2C);
 
 		I2C_Master_Stop();
+		*/
 		//
 		
-		//Mandar nivel de luz a esclavo ultrasónico
+		//Mandar nivel de luz a esclavo ultrasÃ³nico
 		
-		uint8_t porcentaje = obtenerPorcentajeLuz(); //igual con esto, volvemos a saber si el motor dc esta encendido o no por el nivel de luz
 		
-		itoa(porcentaje, bufferDisp, 10);
-		
-		if(!I2C_Master_Start()) continue;
-
-		if (!I2C_Master_Write(slaveUS1W))   // dirección escritura servo
-		{
-			I2C_Master_Stop();
-			continue;
-		}
-
-		// Enviar distancia a servo
-		I2C_Master_Write('L');
-		I2C_Master_Write(porcentaje);
-
-		I2C_Master_Stop();
 		
 		
 		//Leer esclavo peso
@@ -129,7 +117,7 @@ int main(void)
 			continue;
 		}
 		I2C_Master_Write('R');
-		_delay_ms(10);
+		_delay_ms(5);
 		if (!I2C_Master_Repeated_Start())
 		{
 			I2C_Master_Stop();
@@ -142,37 +130,65 @@ int main(void)
 		}
 		I2C_Master_Read(&bufferI2C, 0);
 		I2C_Master_Stop();
-		//Aqui empieza lo de interpretar info de los esclavos
-		 pasoFinal = (uint16_t)bufferI2C * 4;
+		pasoFinal = (uint16_t)bufferI2C * 4;
+		/*
+		int8_t msb, lsb;
+		I2C_Master_Read(&msb, 1);   // ACK para indicar que quieres mÃ¡s
+		I2C_Master_Read(&lsb, 0);   // NACK en el Ãºltimo byte
+		I2C_Master_Stop();
+
+		pasoFinal = ((uint16_t)msb << 8) | lsb;
+*/
 		
+		//Aqui empieza lo de interpretar info de los esclavos
+		
+		uint8_t porcentaje = obtenerPorcentajeLuz(); //igual con esto, volvemos a saber si el motor dc esta encendido o no por el nivel de luz
+		
+		itoa(porcentaje, bufferDisp, 10);
+		
+		if(!I2C_Master_Start()) continue;
+
+		if (!I2C_Master_Write(slaveUS1W))   // direcciÃ³n escritura servo
+		{
+			I2C_Master_Stop();
+			continue;
+		}
+
+		I2C_Master_Write('L');
+		I2C_Master_Write(porcentaje);
+		I2C_Master_Stop();
+		
+				// Enviar distancia a servo
+		
+
 		
 		LCD_Set_Cursor(6,2);
 		LCD_Write_String("     ");
 		LCD_Set_Cursor(6,2);
-		itoa(bufferI2C, bufferTexto, 10);
+		itoa(pasoFinal, bufferTexto, 10);
 		LCD_Write_String(bufferTexto);
-		_delay_ms(50);
+		_delay_ms(5);
 		
 		LCD_Set_Cursor(11,2);
 		LCD_Write_String("     ");
 		LCD_Set_Cursor(11,2);
 		itoa(porcentaje, bufferDisp, 10);
 		LCD_Write_String(bufferDisp);
-		_delay_ms(50);
+		_delay_ms(5);
 
     }
 }
 
-// Función para leer Lux y convertir a escala 0-100%
+// FunciÃ³n para leer Lux y convertir a escala 0-100%
 uint8_t obtenerPorcentajeLuz(void)
 {
 	// Leer valor crudo (0 a 65535)
 	uint16_t lecturaRaw = BH1750_ReadLux();
 	
-	// Saturación: Si hay más luz que el máximo, limitar a 100%
+	// SaturaciÃ³n: Si hay mÃ¡s luz que el mÃ¡ximo, limitar a 100%
 	if (lecturaRaw >= MAX_LUX) return 100;
 
 	// Regla de tres simple: (Lectura * 100) / Maximo
-	// Usamos uint32_t para evitar desbordamiento matemático intermedio
+	// Usamos uint32_t para evitar desbordamiento matemÃ¡tico intermedio
 	return (uint8_t)((uint32_t)lecturaRaw * 100 / MAX_LUX);
 }
