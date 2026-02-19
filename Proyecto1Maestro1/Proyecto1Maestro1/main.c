@@ -174,6 +174,7 @@ int main(void)
 		LCD_Set_Cursor(11,2);
 		itoa(porcentaje, bufferDisp, 10);
 		LCD_Write_String(bufferDisp);
+		
 		_delay_ms(5);
 
     }
