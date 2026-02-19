@@ -124,9 +124,9 @@ int main(void)
 		nueva_pos = 0;
 		} else if (pesoEnGramos < 50)
 		{
-			nueva_pos = 512;
+			nueva_pos = 128;
 		} else {
-			nueva_pos = 1024;
+			nueva_pos = 256;
 		}
 		
 		stepper_update(nueva_pos);
@@ -183,3 +183,4 @@ ISR(TWI_vect){
 		break;
 	}
 }
+
