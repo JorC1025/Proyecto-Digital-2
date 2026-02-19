@@ -23,7 +23,7 @@ volatile uint16_t pesoEnGramos = 0;
 uint8_t buffer = 0;
 uint8_t byteIndex = 0;
 uint8_t pos_lista = 0;
-uint8_t nueva_pos = 0;
+long nueva_pos = 0;
 //Variables para servo
 uint16_t pulso_us = 1000;
 uint16_t pulse_us = 1000;
@@ -62,8 +62,7 @@ void stepper_step(uint8_t direccion) {
 	}
 
 	PORTD = (PORTD & 0x0F) | (secuencia[paso] << 4);
-
-	_delay_ms(3);  // ajusta velocidad
+_delay_ms(3);
 }
 
 void stepper_update(long destino)
@@ -86,6 +85,7 @@ void stepper_update(long destino)
 	}
 
 	posicion_actual = destino;
+	
 }
 
 
@@ -93,7 +93,7 @@ void stepper_update(long destino)
 int main(void)
 {
 	DDRD |= (1 << DDD4) |(1 << DDD5)| (1 << DDD6) |(1 << DDD7); // Configuración pines
-	
+	pwm0_init();
 	I2C_Slave_Init(SlaveAddress);
 	HX711_init();
 	sei();
@@ -121,28 +121,26 @@ int main(void)
 		
 		if (pesoEnGramos < 15)
 		{
-			
-			stepper_update(0);
-			pos_lista = 1;
+		nueva_pos = 0;
 		} else if (pesoEnGramos < 50)
 		{
-			stepper_update(512);
-			pos_lista = 1;
+			nueva_pos = 512;
 		} else {
-			stepper_update(1024);
+			nueva_pos = 1024;
 		}
+		
+		stepper_update(nueva_pos);
+		//pwm0_set_pulse(1000);
+		//pwm0_set_pulse(2000);
 		//Todo arriba de esto funciona, por si hay que borrar es de aqui para abajo
-		
 		/*
-		
-		if(pos_lista){
-			pwm0_set_pulse(1000);
-			pos_lista = 0;	
-		} else{
-			
-			pwm0_set_pulse(2000);
-		}
+		pos_lista = 1;
 		*/
+
+		
+	
+	
+		
 		/*
 		cuando terminen de llegar a su posicion envian un uno a una variable nueva
 		si esta variable nueva es 1 el servo usa pwm para ir de 0 a 180.
