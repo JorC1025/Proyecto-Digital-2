@@ -1,0 +1,116 @@
+[2:21 AM, 2/19/2026] Jorge C. 23502:
+[5:06 AM, 2/19/2026] Erick Perez 23001: #include "config.h"
+#include <HardwareSerial.h> 
+
+#define RXD2 16
+#define TXD2 17
+
+int valor_peso = 0;
+int valor_luz = 0;
+int valor_prox = 0;
+
+char buffer_uart[20];
+int buffer_index = 0;
+
+#define IO_LOOP_DELAY 15000
+unsigned long lastUpdate = 0;
+
+// Feeds de Subida
+AdafruitIO_Feed *feedPeso = io.feed("peso");
+AdafruitIO_Feed *feedLuz  = io.feed("luz");
+AdafruitIO_Feed *feedProx = io.feed("proximidad");
+
+// Feeds de Bajada
+AdafruitIO_Feed *feedModo     = io.feed("modo");
+AdafruitIO_Feed *feedMotor    = io.feed("motor"); 
+AdafruitIO_Feed *feedMotor2   = io.feed("motor2"); 
+AdafruitIO_Feed *feedSelector = io.feed("selector"); // <-- EL SLIDER DE 3 ESTADOS
+
+void setup() {
+  Serial.begin(115200); 
+  delay(1000);
+  Serial2.begin(9600, SERIAL_8N1, RXD2, TXD2); 
+
+  Serial.println("\n--- INICIANDO SISTEMA MULTICONTROL ---");
+  Serial.print("Conectando a Adafruit IO");
+
+  feedModo->onMessage(handleModo);
+  feedMotor->onMessage(handleMotor);
+  feedMotor2->onMessage(handleMotor2);
+  feedSelector->onMessage(handleSelector); // <-- EL SLIDER
+
+  io.connect();
+  while(io.status() < AIO_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+  Serial.println("\n¡Conectado a Adafruit IO exitosamente!");
+  
+  feedModo->get(); 
+  feedMotor->get(); 
+  feedMotor2->get(); 
+  feedSelector->get(); // Sincroniza el slider
+}
+
+void loop() {
+  io.run(); 
+
+  // 1. ESCUCHAR AL NANO
+  while (Serial2.available()) {
+    char c = Serial2.read();
+    if (c == '\n') { 
+      buffer_uart[buffer_index] = '\0'; 
+      if (buffer_index > 1) {
+        char tipo_sensor = buffer_uart[0];       
+        int valor = atoi(&buffer_uart[1]);       
+        
+        switch (tipo_sensor) {
+          case 'P': valor_peso = valor; break;
+          case 'L': valor_luz = valor;  break;
+          case 'X': valor_prox = valor; break;
+        }
+      }
+      buffer_index = 0; 
+    } 
+    else if (c != '\r') { 
+      if (buffer_index < sizeof(buffer_uart) - 1) {
+        buffer_uart[buffer_index++] = c; 
+      }
+    }
+  }
+
+  // 2. SUBIR A LA NUBE
+  if (millis() > (lastUpdate + IO_LOOP_DELAY)) {
+    Serial.println("\n=== SUBIENDO DATOS ===");
+    feedPeso->save(valor_peso);
+    feedLuz->save(valor_luz);
+    feedProx->save(valor_prox);
+    lastUpdate = millis();
+  }
+}
+
+// =========================================================
+// FUNCIONES DE CONTROL
+// =========================================================
+void handleModo(AdafruitIO_Data *data) {
+  if (data->toInt() == 1) Serial2.print("1"); else Serial2.print("0"); 
+}
+
+void handleMotor(AdafruitIO_Data *data) {
+  if (data->toInt() == 1) Serial2.print("2"); else Serial2.print("3"); 
+}
+
+void handleMotor2(AdafruitIO_Data *data) {
+  if (data->toInt() == 1) Serial2.print("4"); else Serial2.print("5"); 
+}
+
+// Función del Slider de 3 Estados
+void handleSelector(AdafruitIO_Data *data) {
+  int estado = data->toInt();
+  Serial.print("[WIFI] SELECTOR -> Estado "); Serial.println(estado);
+  
+  // Traducimos 1, 2 y 3 en '6', '7' y '8' para el Nano
+  if (estado == 1)      Serial2.print("6"); 
+  else if (estado == 2) Serial2.print("7"); 
+  else if (estado == 3) Serial2.print("8"); 
+}
