@@ -27,7 +27,7 @@
 
 typedef struct {
 	int32_t offset;   // tare en cuentas
-	float   scale;    // cuentas por gramo (o por tu unidad)
+	float   scale;    // cuentas por gramo
 } HX711_Cal;
 
 // --- SLAVE (lee sensor) ---
@@ -36,12 +36,13 @@ uint8_t HX711_isReady(void);
 int32_t HX711_readRaw24_A128(void);             // signed int32 (sign extend)
 int32_t HX711_readAverage_A128(uint8_t samples);
 
-// --- Calibración / tare (si lo quisieras hacer donde sea) ---
+// --- CalibraciÃ³n / tare ---
 void    HX711_tare_fromRaw(HX711_Cal *cal, int32_t raw_avg);
 void    HX711_setScale(HX711_Cal *cal, float counts_per_unit);
 float   HX711_toUnits(const HX711_Cal *cal, int32_t raw);
 
 // --- MASTER (decode desde 3 bytes enviados por el SLAVE) ---
 int32_t HX711_decode24(uint8_t b2, uint8_t b1, uint8_t b0); // b2=MSB
+
 
 #endif
