@@ -130,21 +130,9 @@ int main(void)
 		}
 		
 		stepper_update(nueva_pos);
-		//pwm0_set_pulse(1000);
-		//pwm0_set_pulse(2000);
-		//Todo arriba de esto funciona, por si hay que borrar es de aqui para abajo
-		/*
-		pos_lista = 1;
-		*/
+		pwm0_set_pulse(1000);
+		pwm0_set_pulse(2000);
 
-		
-	
-	
-		
-		/*
-		cuando terminen de llegar a su posicion envian un uno a una variable nueva
-		si esta variable nueva es 1 el servo usa pwm para ir de 0 a 180.
-		*/
 	}
 }
 
@@ -183,4 +171,5 @@ ISR(TWI_vect){
 		break;
 	}
 }
+
 
